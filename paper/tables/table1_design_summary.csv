@@ -1,0 +1,5 @@
+Protocol,Session,Temperatures_C,Nominal_or_target_pressure,Achieved_pressure_PSI,Number_of_balls,Repeats_per_cell,Total_drops
+Sealed factorial,Session 1,"0, 20, 40","6, 10, 14 PSI nominal",4.62-15.98,3,5,135
+Matched pressure,Session 1,"0, 20, 40",10 PSI target,9.90-10.07,3,3,27
+Matched counterbalanced,Session 2,"0, 20, 40",10 PSI target,9.93-10.05,3,3,27
+Operational baseline checks,Session 2,20,10 PSI target,9.96-10.01,3,1,3

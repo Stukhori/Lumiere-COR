@@ -1,0 +1,25 @@
+Football rebound data validation report
+=======================================
+
+Status: PASS WITH WARNINGS
+
+CRITICAL ERRORS
+---------------
+- None.
+
+WARNINGS
+--------
+- Session 1 master Drop 44: heights imply COR 0.810502, recorded COR is 0.8099 (difference +0.000602).
+- Session 1 master Drop 160: heights imply COR 0.819756, recorded COR is 0.8200 (difference -0.000244).
+- Drop 161 timestamp anomaly: filename time 2026-09-26 22:03:37 is later than Drop 162 time 2026-09-26 17:06:54.
+
+VALIDATED CHECKS / NOTES
+------------------------
+- Session 1 master: row count validated (162).
+- Annotation audit: row count validated (25).
+- Annotation audit: all recorded COR values agree with displayed heights within 0.0001.
+- Session 2: row count validated (30).
+- Session 2: all recorded COR values agree with displayed heights within 0.0001.
+- Session 1 matched-pressure pre-impact range: 9.90-10.07 PSI.
+- Annotation differences validated as Annotator 2 minus Annotator 1.
+- Session 2 primary means exclude all 3 controls and retain 27 experimental drops.
