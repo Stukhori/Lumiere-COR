@@ -186,36 +186,90 @@ def figure1_design(master: pd.DataFrame, session2: pd.DataFrame) -> list[Path]:
     return save_figure(fig, "fig1_experimental_design")
 
 
-def figure2_sealed(master: pd.DataFrame) -> list[Path]:
+def draw_sealed_metric(
+    ax: plt.Axes, sealed: pd.DataFrame, bm: pd.DataFrame, overall: pd.DataFrame, metric: str
+) -> None:
+    """Draw the same trial, ball, and condition summaries in either layout."""
+    for pressure in sorted(sealed["Target_Press_PSI"].unique()):
+        raw = sealed.loc[sealed["Target_Press_PSI"].eq(pressure)]
+        points = bm.loc[bm["Target_Press_PSI"].eq(pressure)]
+        line = overall.loc[overall["Target_Press_PSI"].eq(pressure)].sort_values("Target_Temp_C")
+        ax.scatter(raw["Target_Temp_C"] + deterministic_jitter(raw["Drop_ID"]), raw[metric], s=7,
+                   color=PRESSURE_COLORS[pressure], alpha=0.11, edgecolors="none", zorder=1)
+        ax.scatter(points["Target_Temp_C"], points[metric], s=25, marker=PRESSURE_MARKERS[pressure],
+                   facecolor="white", edgecolor=PRESSURE_COLORS[pressure], linewidth=0.9, alpha=0.85, zorder=3)
+        ax.plot(line["Target_Temp_C"], line[metric], color=PRESSURE_COLORS[pressure],
+                marker=PRESSURE_MARKERS[pressure], markersize=5.5, linewidth=1.8,
+                label=f"{pressure} PSI", zorder=4)
+
+
+def sealed_figure_data(master: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     sealed = master.loc[master["Protocol"].eq("Factorial_3x3_Sealed")].copy()
     bm = ball_condition_means(sealed, ["Target_Press_PSI"])
     overall = overall_from_ball_means(bm, ["Target_Temp_C", "Target_Press_PSI"])
-    fig, axes = plt.subplots(2, 1, figsize=(4.9, 5.5), sharex=True, gridspec_kw={"hspace": 0.12})
+    return sealed, bm, overall
+
+
+def figure2_sealed(master: pd.DataFrame) -> list[Path]:
+    sealed, bm, overall = sealed_figure_data(master)
+    fig, axes = plt.subplots(2, 1, figsize=(4.9, 5.9), sharex=True)
     metrics = [
         ("Calculated_COR_e", "Coefficient of restitution, $e$", "a"),
         ("Pre_Impact_Press_PSI", "Pre-impact gauge pressure (PSI)", "b"),
     ]
     for ax, (metric, ylabel, lab) in zip(axes, metrics):
-        for pressure in sorted(sealed["Target_Press_PSI"].unique()):
-            raw = sealed.loc[sealed["Target_Press_PSI"].eq(pressure)]
-            points = bm.loc[bm["Target_Press_PSI"].eq(pressure)]
-            line = overall.loc[overall["Target_Press_PSI"].eq(pressure)].sort_values("Target_Temp_C")
-            ax.scatter(raw["Target_Temp_C"] + deterministic_jitter(raw["Drop_ID"]), raw[metric], s=7,
-                       color=PRESSURE_COLORS[pressure], alpha=0.11, edgecolors="none", zorder=1)
-            ax.scatter(points["Target_Temp_C"], points[metric], s=25, marker=PRESSURE_MARKERS[pressure],
-                       facecolor="white", edgecolor=PRESSURE_COLORS[pressure], linewidth=0.9, alpha=0.85, zorder=3)
-            ax.plot(line["Target_Temp_C"], line[metric], color=PRESSURE_COLORS[pressure],
-                    marker=PRESSURE_MARKERS[pressure], markersize=5.5, linewidth=1.8,
-                    label=f"{pressure} PSI", zorder=4)
+        draw_sealed_metric(ax, sealed, bm, overall, metric)
         ax.set_ylabel(ylabel)
         ax.set_xticks(TEMP_ORDER)
-        panel_label(ax, lab)
+        if lab == "b":
+            # Match panel (a)'s left edge, above the pressure-axis label.
+            ax.text(-0.12, 1.16, "(b)", transform=ax.transAxes, fontsize=10,
+                    fontweight="bold", va="bottom")
+        else:
+            panel_label(ax, lab)
         finish_axis(ax)
-    axes[0].legend(title="Nominal pressure at\nreference condition", frameon=False, ncol=3, loc="upper left")
+    axes[0].legend(
+        title="Nominal pressure at\nreference condition",
+        frameon=False,
+        ncol=3,
+        loc="lower left",
+        bbox_to_anchor=(0, 1.02),
+    )
     axes[1].set_xlabel("Target temperature (°C)")
     axes[0].set_ylim(0.70, 0.91)
-    fig.subplots_adjust(left=0.15, right=0.98, top=0.97, bottom=0.10)
+    fig.subplots_adjust(left=0.15, right=0.98, top=0.82, bottom=0.10, hspace=0.42)
     return save_figure(fig, "fig2_sealed_factorial_response")
+
+
+def figure2_sealed_parts(master: pd.DataFrame) -> list[Path]:
+    """Export Figure 2's two panels as independent, self-contained graphs."""
+    sealed, bm, overall = sealed_figure_data(master)
+    parts = [
+        ("Calculated_COR_e", "Coefficient of restitution, $e$", "a", "fig2a_sealed_factorial_cor"),
+        ("Pre_Impact_Press_PSI", "Pre-impact gauge pressure (PSI)", "b", "fig2b_sealed_factorial_pressure"),
+    ]
+    outputs: list[Path] = []
+    for metric, ylabel, label, stem in parts:
+        fig, ax = plt.subplots(figsize=(4.9, 3.3))
+        draw_sealed_metric(ax, sealed, bm, overall, metric)
+        ax.set_xlabel("Target temperature (°C)")
+        ax.set_ylabel(ylabel)
+        ax.set_xticks(TEMP_ORDER)
+        if label == "a":
+            ax.set_ylim(0.70, 0.91)
+        ax.text(-0.12, 1.14, f"({label})", transform=ax.transAxes,
+                fontsize=10, fontweight="bold", va="bottom")
+        ax.legend(
+            title="Nominal pressure at\nreference condition",
+            frameon=False,
+            ncol=3,
+            loc="lower left",
+            bbox_to_anchor=(0, 1.02),
+        )
+        finish_axis(ax)
+        fig.subplots_adjust(left=0.15, right=0.98, top=0.72, bottom=0.18)
+        outputs += save_figure(fig, stem)
+    return outputs
 
 
 def figure3_matched(master: pd.DataFrame, session2: pd.DataFrame) -> list[Path]:
@@ -595,6 +649,10 @@ def write_captions(master: pd.DataFrame, session2: pd.DataFrame) -> Path:
 
 **Figure 2. Session 1 sealed-factorial response.** (a) Recorded height-derived coefficient of restitution (COR) versus target temperature for the three nominal-pressure paths. Small faint points are individual drops, open points are means of repeated drops for each ball-condition, and large connected markers are condition means calculated as the mean of the three ball-condition means. (b) Measured pre-impact gauge pressure for the same observations and summaries. Colors and marker shapes identify nominal pressure at the reference condition; connecting lines join only overall condition means. Each factorial cell contains three balls and five repeated drops per ball ({sealed_n} drops total). The COR axis is truncated to the plotted range (0.70–0.91). The panel describes the sealed experimental path, along which pressure changed with temperature; it does not assign the temperature response to a particular mechanism.
 
+**Figure 2a, standalone COR graph.** Recorded height-derived COR versus target temperature for the Session 1 sealed factorial ({sealed_n} drops; three balls, five repeated drops per ball-temperature-pressure cell). Faint points are individual drops, open markers are ball-condition means, and connected filled markers are the means of the three ball-condition means. Colors and marker shapes identify nominal pressure at the reference condition. The COR axis is truncated to 0.70–0.91.
+
+**Figure 2b, standalone pressure graph.** Measured pre-impact gauge pressure versus target temperature for the same {sealed_n} Session 1 sealed-factorial drops. Faint points are individual drops, open markers are ball-condition means, and connected filled markers are the means of the three ball-condition means. Colors and marker shapes identify nominal pressure at the reference condition. The increase along each line describes the sealed experimental path and does not assign a mechanism to the COR response.
+
 **Figure 3. Matched-pressure replication.** (a) COR versus target temperature for Session 1 ({s1m_n} drops) and Session 2 ({s2m_n} experimental drops; the three operational checks are excluded). Colored thin lines connect repeated-drop means for the same physical ball; thick dark lines are session-wide condition means computed from the three ball means. Dashed and dash-dot lines identify Sessions 1 and 2, respectively. (b) Within-ball 0–40 °C contrasts, $\\Delta e_{{40-0}}=\\bar e_{{40}}-\\bar e_{{0}}$. Circles and diamonds show Sessions 1 and 2; horizontal segments connect the two measurements for the same ball. Larger dark markers show across-ball means. The zero line is a reference. The six plotted session-ball contrasts represent repeated measurements of three balls, not six independent footballs. The COR axis in panel (a) is truncated to 0.775–0.845.
 
 **Figure 4. Comparison of sealed and matched experimental paths.** (a) COR and (b) measured pre-impact gauge pressure versus target temperature for the Session 1 sealed nominal-10-PSI path, Session 1 matched-pressure path, and Session 2 matched-pressure replication. Colored semi-transparent points are repeated-drop means for Ball A, Ball B, and Ball C; connected path lines are overall condition means calculated from the three ball means. Solid, dashed, and dash-dot lines identify sealed Session 1, matched Session 1, and matched Session 2. The sealed protocol allowed pressure to vary naturally with temperature, whereas both matched protocols adjusted pressure before impact. (c) Ball-level 0–40 °C COR changes for each path; small colored points are individual ball contrasts and diamonds are their across-ball means. This is a descriptive comparison between experimental paths, not a decomposition into pressure and material effects. The COR axis in panel (a) is truncated to 0.77–0.89.
@@ -703,6 +761,8 @@ def write_figure_includes() -> Path:
     entries = [
         ("fig1_experimental_design", "experimental-design"),
         ("fig2_sealed_factorial_response", "sealed-factorial"),
+        ("fig2a_sealed_factorial_cor", "sealed-factorial-cor"),
+        ("fig2b_sealed_factorial_pressure", "sealed-factorial-pressure"),
         ("fig3_matched_pressure_replication", "matched-replication"),
         ("fig4_protocol_path_comparison", "protocol-paths"),
         ("fig5_annotation_agreement", "annotation-agreement"),
@@ -743,6 +803,7 @@ def main() -> int:
     outputs: list[Path] = []
     outputs += figure1_design(master, session2)
     outputs += figure2_sealed(master)
+    outputs += figure2_sealed_parts(master)
     outputs += figure3_matched(master, session2)
     outputs += figure4_paths(master, session2)
     outputs += figure5_audit(audit)

@@ -75,6 +75,8 @@ def test_all_requested_outputs_exist_and_are_nonempty() -> None:
     figure_stems = [
         "fig1_experimental_design",
         "fig2_sealed_factorial_response",
+        "fig2a_sealed_factorial_cor",
+        "fig2b_sealed_factorial_pressure",
         "fig3_matched_pressure_replication",
         "fig4_protocol_path_comparison",
         "fig5_annotation_agreement",

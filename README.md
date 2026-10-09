@@ -23,7 +23,14 @@ Upload the `paper/figures` folder to an Overleaf project, keeping its name `figu
 \end{figure}
 ```
 
-`paper/figures/figure_includes.tex` contains commented examples for all five main figures. The LaTeX tables are in `paper/tables/`.
+`paper/figures/figure_includes.tex` contains commented examples for all five main figures and the separate Figure 2 panels. The LaTeX tables are in `paper/tables/`.
+
+The two panels of Figure 2 are also available as independent PDFs:
+
+- `paper/figures/fig2a_sealed_factorial_cor.pdf`
+- `paper/figures/fig2b_sealed_factorial_pressure.pdf`
+
+Upload either or both PDFs to Overleaf and insert them with separate `\includegraphics` commands. The matching standalone captions are in `paper/figure_captions.md`. The original stacked PDF remains available for layouts that need one combined figure.
 
 ## Reproduce the figures and tables
 
